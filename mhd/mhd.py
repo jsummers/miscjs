@@ -109,6 +109,36 @@ def calc_com_keypos(ctx, fctx):
         invalidate_file(fctx)
         return
 
+# The signature for extended EXE formats
+def calc_keypos_exesig(ctx, fctx, e_codepos, e_relocpos, e_reloclen):
+    e_relocend = e_relocpos+e_reloclen
+
+    if fctx.length<64 or e_codepos<64 or e_relocend>e_codepos:
+        invalidate_file(fctx)
+        return
+
+    # Make sure the reloc table doesn't overlap the extension
+    # pointer. (This is very permissive. Generally, the reloc pos
+    # will be >=64, except maybe if its pos and len are both 0.)
+    if e_relocpos<=60 and e_relocend<=60:
+        pass
+    elif e_relocpos>=64:
+        pass
+    else:
+        invalidate_file(fctx)
+        return
+
+    fctx.inf.seek(60, 0)
+    tmpbytes = fctx.inf.read(4)
+    u_items = struct.unpack("<L", tmpbytes)
+    sigpos = u_items[0]
+
+    if sigpos<64 or sigpos<e_relocend:
+        invalidate_file(fctx)
+        return
+
+    fctx.keypos = sigpos
+
 def calc_exe_keypos(ctx, fctx):
     if not fctx.isopen:
         return
@@ -125,8 +155,12 @@ def calc_exe_keypos(ctx, fctx):
         invalidate_file(fctx)
         return
 
+    e_codepos = 16*e8
+    e_relocpos = e24
+    e_reloclen = 4*e6
+
     if ctx.keytype=='execode':
-        fctx.keypos = 16*e8
+        fctx.keypos = e_codepos
     elif ctx.keytype=='exeoverlay':
         if e4<1:
             invalidate_file(fctx)
@@ -136,17 +170,19 @@ def calc_exe_keypos(ctx, fctx):
         else:
             fctx.keypos = 512*(e4-1) + e2
     elif ctx.keytype=='exeentry':
-        fctx.keypos = 16*e8 + 16*e22 + e20
+        fctx.keypos =  e_codepos + 16*e22 + e20
     elif ctx.keytype=='exereloc':
-        if e24==0 and e6==0:
+        if e_relocpos==0 and e6==0:
             fctx.keypos = 28
         else:
-            fctx.keypos = e24
+            fctx.keypos = e_relocpos
     elif ctx.keytype=='exerelocend':
-        if e24==0 and e6==0:
+        if e_relocpos==0 and e6==0:
             fctx.keypos = 28
         else:
-            fctx.keypos = e24 + 4*e6
+            fctx.keypos = e_relocpos + e_reloclen
+    elif ctx.keytype=='exesig':
+        calc_keypos_exesig(ctx, fctx, e_codepos, e_relocpos, e_reloclen)
 
 def onefile_calckeypos(ctx, fctx):
     if ctx.keytype=='' or ctx.keytype=='start':
@@ -155,7 +191,7 @@ def onefile_calckeypos(ctx, fctx):
         fctx.keypos = fctx.length
     elif ctx.keytype=='execode' or ctx.keytype=='exeoverlay' or \
         ctx.keytype=='exeentry' or ctx.keytype=='exereloc' or \
-        ctx.keytype=='exerelocend':
+        ctx.keytype=='exerelocend' or ctx.keytype=='exesig':
         calc_exe_keypos(ctx, fctx)
     elif ctx.keytype=='comjmp':
         calc_com_keypos(ctx, fctx)
@@ -192,8 +228,8 @@ def usage():
     print(" -n<count>: Number of bytes to dump")
     print(" -o<offset>: Offset of first byte to dump, measured from \"key\" position")
     print(" -keof: Key position = end of file")
-    print(" -kexecode, -kexeoverlay, -kexeentry, -kexereloc, -kexerelocend: Special key")
-    print("    positions for DOS EXE files")
+    print(" -kexecode, -kexeoverlay, -kexeentry, -kexereloc, -kexerelocend, -kexesig:")
+    print("    Special key positions for EXE files")
     print(" -kcomjmp: Special key position for DOS COM files")
 
 def main():
