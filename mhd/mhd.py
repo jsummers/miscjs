@@ -113,9 +113,13 @@ def calc_com_keypos(ctx, fctx):
 def calc_keypos_exesig(ctx, fctx, e_codepos, e_relocpos, e_reloclen):
     e_relocend = e_relocpos+e_reloclen
 
-    if fctx.length<64 or e_codepos<64 or e_relocend>e_codepos:
+    if fctx.length<64:
         invalidate_file(fctx)
         return
+    if e_codepos!=0:
+        if e_codepos<64 or e_relocend>e_codepos:
+            invalidate_file(fctx)
+            return
 
     # Make sure the reloc table doesn't overlap the extension
     # pointer. (This is very permissive. Generally, the reloc pos
