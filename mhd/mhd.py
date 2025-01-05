@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # MHD: A script to hex dump multiple files at once
-# Copyright (C) 2024 Jason Summers
+# Copyright (C) 2024-2025 Jason Summers
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -100,7 +100,7 @@ def calc_com_keypos(ctx, fctx):
     fctx.inf.seek(0, 0)
     tmpbytes = fctx.inf.read(3)
     if tmpbytes[0]==0xe9:
-        e0 = struct.unpack("<h", tmpbytes[1:3])
+        e0 = struct.unpack("<H", tmpbytes[1:3])
         fctx.keypos = 3 + e0[0];
     elif tmpbytes[0]==0xeb:
         e0 = struct.unpack("b", tmpbytes[1:2])
