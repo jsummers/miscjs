@@ -24,6 +24,7 @@ class context:
         ctx.offset_from_key = 0
         ctx.nbytes = 16
         ctx.keytype = ''
+        ctx.include_ascii = True
 
 class file_context:
     def __init__(fctx, ctx):
@@ -34,13 +35,7 @@ class file_context:
         fctx.datavalid = bytearray(ctx.nbytes)
         fctx.keypos = 0
 
-def onefile_print(ctx, fctx):
-    for i in range(ctx.nbytes):
-        if fctx.datavalid[i]:
-            print("%02x " % (fctx.data[i]), end='')
-        else:
-            print("   ", end='')
-
+def ascii_print(ctx, fctx):
     for i in range(ctx.nbytes):
         if fctx.datavalid[i]:
             if fctx.data[i]>=32 and fctx.data[i]<=126:
@@ -49,8 +44,19 @@ def onefile_print(ctx, fctx):
                 print(".", end='')
         else:
                 print(" ", end='')
+    print(" ", end='')
 
-    print(" %s" % (fctx.name))
+def onefile_print(ctx, fctx):
+    for i in range(ctx.nbytes):
+        if fctx.datavalid[i]:
+            print("%02x " % (fctx.data[i]), end='')
+        else:
+            print("   ", end='')
+
+    if ctx.include_ascii:
+        ascii_print(ctx, fctx)
+
+    print("%s" % (fctx.name))
 
 
 def onefile_readbytes(ctx, fctx):
@@ -231,6 +237,7 @@ def usage():
     print("Options:")
     print(" -n<count>: Number of bytes to dump")
     print(" -o<offset>: Offset of first byte to dump, measured from \"key\" position")
+    print(" -Z: Suppress ASCII representation")
     print(" -keof: Key position = end of file")
     print(" -kexecode, -kexeoverlay, -kexeentry, -kexereloc, -kexerelocend, -kexesig:")
     print("    Special key positions for EXE files")
@@ -246,6 +253,8 @@ def main():
                 ctx.offset_from_key = int(sys.argv[i][2:])
             elif sys.argv[i][1]=='n':
                 ctx.nbytes = int(sys.argv[i][2:])
+            elif sys.argv[i][1]=='Z':
+                ctx.include_ascii = False
             elif sys.argv[i][1]=='k':
                 ctx.keytype = sys.argv[i][2:]
         else:
