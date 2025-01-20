@@ -25,6 +25,8 @@ class context:
         ctx.nbytes = 16
         ctx.keytype = ''
         ctx.include_ascii = True
+        ctx.offset_is_set = False
+        ctx.use_backward_offset = False
 
 class file_context:
     def __init__(fctx, ctx):
@@ -195,9 +197,9 @@ def calc_exe_keypos(ctx, fctx):
         calc_keypos_exesig(ctx, fctx, e_codepos, e_relocpos, e_reloclen)
 
 def onefile_calckeypos(ctx, fctx):
-    if ctx.keytype=='' or ctx.keytype=='start':
+    if ctx.keytype=='':
         fctx.keypos = 0
-    elif ctx.keytype=='end' or ctx.keytype=='eof':
+    elif ctx.keytype=='eof':
         fctx.keypos = fctx.length
     elif ctx.keytype=='execode' or ctx.keytype=='exeoverlay' or \
         ctx.keytype=='exeentry' or ctx.keytype=='exereloc' or \
@@ -237,6 +239,7 @@ def usage():
     print("Options:")
     print(" -n<count>: Number of bytes to dump")
     print(" -o<offset>: Offset of first byte to dump, measured from \"key\" position")
+    print(" -ob: Dump the bytes just before the key position")
     print(" -Z: Suppress ASCII representation")
     print(" -keof: Key position = end of file")
     print(" -kexecode, -kexeoverlay, -kexeentry, -kexereloc, -kexerelocend, -kexesig:")
@@ -250,19 +253,38 @@ def main():
     for i in range(1, len(sys.argv)):
         if sys.argv[i][0]=='-':
             if sys.argv[i][1]=='o':
-                ctx.offset_from_key = int(sys.argv[i][2:])
+                if sys.argv[i][2:]=='b':
+                    ctx.use_backward_offset = True
+                else:
+                    ctx.offset_from_key = int(sys.argv[i][2:])
+                    ctx.offset_is_set = True
             elif sys.argv[i][1]=='n':
                 ctx.nbytes = int(sys.argv[i][2:])
             elif sys.argv[i][1]=='Z':
                 ctx.include_ascii = False
             elif sys.argv[i][1]=='k':
                 ctx.keytype = sys.argv[i][2:]
+            else:
+                print('Unrecognized option "%s"' % (sys.argv[i]))
+                return
         else:
             filecount = filecount+1
 
     if filecount==0:
         usage()
         return
+
+    if ctx.keytype=='end':
+        ctx.keytype = 'eof'
+    if ctx.keytype=='start':
+        ctx.keytype = ''
+
+    if ctx.keytype=='eof' and not ctx.offset_is_set:
+        ctx.use_backward_offset = True
+
+    if ctx.use_backward_offset:
+        ctx.offset_from_key = -ctx.nbytes
+        ctx.offset_is_set = True
 
     for i in range(1, len(sys.argv)):
         if sys.argv[i][0]!='-':

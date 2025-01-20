@@ -20,6 +20,10 @@ Each file's hex dump starts at some "key position", which by default is the
 beginning of the file. If the key position is not valid for a file, its hex
 dump will be blank.
 
+The special -ob option sets the offset (-o) to the negative of the byte
+count (-n). That is, it dumps bytes from before the key position, instead of
+after. This is the default if "-keof" is used.
+
 The -kexe... options are mainly for DOS EXE files, except for -kexesig which
 is for newer EXE files.
 
