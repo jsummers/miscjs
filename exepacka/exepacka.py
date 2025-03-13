@@ -150,6 +150,8 @@ class file_context:
 
         ctx.cmpr_reloc_tbl_pos = ea_number()
         ctx.cmpr_reloc_tbl_size = ea_number()
+        ctx.cmpr_reloc_tbl_nrelocs = ea_number()
+
         ctx.dest_len = 0
         ctx.skip_len = 0 # Meaningful if >1
         ctx.reported_exepack_size = 0
@@ -482,6 +484,18 @@ def ea_decode_epilog(ctx):
     ctx.crc_fingerprint.set(mycrc32(ctx.blob[ctx.crc_region_pos.val : \
         region_endpos]))
 
+def ea_find_num_relocs(ctx):
+    if not ctx.cmpr_reloc_tbl_pos.val_known:
+        return
+    if not ctx.cmpr_reloc_tbl_size.val_known:
+        return
+
+    # It's easy to deduce the number of relocations, without decompressing.
+    if ctx.cmpr_reloc_tbl_size.val < 32:
+        return
+    n = (ctx.cmpr_reloc_tbl_size.val - 32) // 2
+    ctx.cmpr_reloc_tbl_nrelocs.set(n)
+
 def ea_deduce_settings1(ctx):
     if (not ctx.errmsg_pos.val_known) and \
         ctx.epilogpos.val_known:
@@ -515,6 +529,7 @@ def ea_deduce_settings1(ctx):
     if ctx.cmpr_reloc_tbl_pos.val_known:
         ctx.cmpr_reloc_tbl_size.set(ctx.CS_pos_in_file.val + \
         ctx.reported_exepack_size - ctx.cmpr_reloc_tbl_pos.val)
+        ea_find_num_relocs(ctx)
 
 def ea_check_errmsg(ctx):
     if not ctx.errmsg_pos.val_known:
@@ -578,6 +593,9 @@ def report_exepack_specific(ctx):
 
     print(ctx.p_HIGH+'cmpr reloc tbl pos:', ctx.cmpr_reloc_tbl_pos.getpr_withrel(ctx))
     print(ctx.p_LOW+' cmpr reloc tbl size:', ctx.cmpr_reloc_tbl_size.getpr())
+    if ctx.cmpr_reloc_tbl_size.val_known:
+        print(ctx.p_INFO+' cmpr reloc tbl num relocs:', \
+            ctx.cmpr_reloc_tbl_nrelocs.getpr())
 
     print(ctx.p_INFO+'created by:', ctx.createdby.getpr())
     if len(ctx.tags) > 0:
