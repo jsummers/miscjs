@@ -126,6 +126,7 @@ class file_context:
         ctx.entrypoint = ea_number()
         ctx.cs = 0
         ctx.ip = 0
+        ctx.reloc_tbl_pos = 0
         ctx.reloc_tbl_end = 0
         ctx.codestart = ea_number()
         ctx.codeend = ea_number()
@@ -271,8 +272,8 @@ def ea_read_exe(ctx):
     ctx.CS_pos_in_file.set(ctx.codestart.val + 16*ctx.cs)
     ctx.entrypoint.set(ctx.codestart.val + 16*ctx.cs + ctx.ip)
 
-    reloc_tbl_start = getu16(ctx, 24)
-    ctx.reloc_tbl_end = reloc_tbl_start + 4*num_relocs
+    ctx.reloc_tbl_pos = getu16(ctx, 24)
+    ctx.reloc_tbl_end = ctx.reloc_tbl_pos + 4*num_relocs
 
 
     if ctx.codeend.val <= ctx.file_size.val:
@@ -542,12 +543,14 @@ def ea_check_errmsg(ctx):
         ctx.tags.append('modified error message')
 
 def report_exe_specific(ctx):
-    print(ctx.p_INFO+'code start:', ctx.codestart.getpr())
-    print(ctx.p_INFO+'code end:', ctx.codeend.getpr())
+    print(ctx.p_INFO+'host code start:', ctx.codestart.getpr())
+    print(ctx.p_INFO+'host code end:', ctx.codeend.getpr())
     # Could print these things, but it's redundant.
     #print(ctx.p_INFO+'CS:', ctx.CS_pos_in_file.getpr_withrel(ctx))
     #print(ctx.p_INFO+'initial IP (relative to CS):', ctx.ip)
-    print(ctx.p_INFO+'exe entry point:', ctx.entrypoint.getpr())
+    print(ctx.p_INFO+'host entry point:', ctx.entrypoint.getpr())
+
+    print(ctx.p_MED+'host reloc tbl pos:', ctx.reloc_tbl_pos)
 
     has_overlay = ea_bool()
     if ctx.overlay_size.val > 0:
@@ -555,7 +558,7 @@ def report_exe_specific(ctx):
     else:
         has_overlay.set(False)
 
-    print(ctx.p_MED+'has overlay:', has_overlay.getpr_yesno())
+    print(ctx.p_MED+'host has overlay:', has_overlay.getpr_yesno())
     if ctx.overlay_size.val > 0:
         print(ctx.p_MED+' overlay pos:', ctx.overlay.pos.getpr())
         print(ctx.p_MED+' overlay size:', ctx.overlay_size.getpr())
