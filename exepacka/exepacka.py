@@ -394,6 +394,12 @@ def ea_decode_decoder(ctx):
         ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
         found = True
 
+    if (not found) and (ctx.crc_fingerprint.val==0xce1bf069):
+        ctx.decoder_size.set(291)
+        ctx.decoder.segclass.set("Artisoft291")
+        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
+        found = True
+
     if (not found) and (ctx.crc_fingerprint.val==0xc705ff4f):
         ctx.decoder_size.set(258)
         ctx.decoder.segclass.set("EXEPATCK258")
