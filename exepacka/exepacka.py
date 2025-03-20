@@ -275,7 +275,6 @@ def ea_read_exe(ctx):
     ctx.reloc_tbl_pos = getu16(ctx, 24)
     ctx.reloc_tbl_end = ctx.reloc_tbl_pos + 4*num_relocs
 
-
     if ctx.codeend.val <= ctx.file_size.val:
         ctx.overlay_size.set(ctx.file_size.val - ctx.codeend.val)
     else:
@@ -301,6 +300,23 @@ def ea_decode_overlay(ctx):
     if ctx.overlay_size.val < 1:
         return
     # (Reserved for future development.)
+
+def ea_is_all_zeroes(ctx, pos1, pos2):
+    if pos1 >= pos2:
+        return True
+    if pos2 > len(ctx.blob):
+        return False
+    for i in range(pos1, pos2):
+        if ctx.blob[i] != 0x00:
+            return False
+    return True
+
+def ea_check_cdata2(ctx):
+    rte = ctx.reloc_tbl_end
+    if rte < 28:
+        rte = 28
+    if not ea_is_all_zeroes(ctx, rte, ctx.codestart.val):
+        ctx.tags.append('custom data after reloc table')
 
 # Find and decode the 16-byte or 18-byte EXEPACK header.
 # Set ctx.decoder.pos.
@@ -453,6 +469,7 @@ def ea_decode_decoder(ctx):
         ok, foundpos = find_bseq_exact(ctx, pos+50, 120,
         b'\x0e\x1f\xfc\x8b\xd3\xad\x91\xe3\x14\xad')
         if ok:
+            # TODO: Decide how to classify these decoders.
             #ctx.decoder.segclass.set("EXPAKFIX")
             ctx.createdby.set("EXPAKFIX")
             pos_of_reloc_ptr = foundpos-2
@@ -651,6 +668,8 @@ def main_onefile(gctx, filename):
         ea_read_main(ctx)
     if ctx.errmsg=='':
         ea_decode_overlay(ctx)
+    if ctx.errmsg=='':
+        ea_check_cdata2(ctx)
     if ctx.errmsg=='':
         ea_decode_header(ctx)
     if ctx.errmsg=='':
