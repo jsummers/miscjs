@@ -349,6 +349,22 @@ def ea_decode_header(ctx):
     if ctx.header_size.val==18:
         ctx.skip_len = getu16(ctx, ctx.header_pos.val + 14)
 
+g_fingerprints = {
+    0x77dc4e4a: {'ds':258, 'sc':'common258', 'cb':'EXEPACK 4.00, etc.'},
+    0x7b0bb610: {'ds':277, 'sc':'common277', 'cb':'LINK 3.60/etc.'},
+    0xae58e006: {'ds':279, 'sc':'common279', 'cb':'EXEPACK 4.03, etc.'},
+    0xa6a446ac: {'ds':283, 'sc':'common283', 'cb':'EXEPACK 4.05-4.06'},
+    0x1797940c: {'ds':290, 'sc':'common290', 'cb':'LINK 5.60/etc.'},
+    0x7755de74: {'ds':283, 'sc':'WordPerfect283'},
+    0xb3e99388: {'ds':290, 'sc':'DECOMP'},
+    0xce1bf069: {'ds':291, 'sc':'Artisoft291'},
+    0x4745c5ca: {'ds':283, 'sc':'LOWFIX', 'cb':'LOWFIX'},
+    0xc705ff4f: {'ds':258, 'sc':'EXEPATCK258', 'cb':'EXEPATCK'},
+    0x87ba64ac: {'ds':277, 'sc':'EXEPATCK277', 'cb':'EXEPATCK'},
+    0x10417761: {'ds':279, 'sc':'EXEPATCK279', 'cb':'EXEPATCK'},
+    0x5a159410: {'ds':283, 'sc':'EXEPATCK283', 'cb':'EXEPATCK'},
+    0x848c6688: {'ds':283, 'sc':'Fifield', 'cb':"D. Fifield's exepack"} }
+
 # Decode the main part of the EXEPACK decoder.
 # Requires ctx.decoder.pos to be set.
 def ea_decode_decoder(ctx):
@@ -363,99 +379,14 @@ def ea_decode_decoder(ctx):
     pos = ctx.decoder.pos.val
     pos_of_reloc_ptr = 0
 
-    if (not found) and (ctx.crc_fingerprint.val==0x77dc4e4a):
-        ctx.decoder_size.set(258)
-        ctx.decoder.segclass.set("common258")
-        ctx.createdby.set("EXEPACK 4.00, etc.")
+    if ctx.crc_fingerprint.val in g_fingerprints:
+        x = g_fingerprints[ctx.crc_fingerprint.val]
+        ctx.decoder_size.set(x['ds'])
         ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x7b0bb610):
-        ctx.decoder_size.set(277)
-        ctx.decoder.segclass.set("common277")
-        ctx.createdby.set("LINK 3.60/etc.")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0xae58e006):
-        ctx.decoder_size.set(279)
-        ctx.decoder.segclass.set("common279")
-        ctx.createdby.set("EXEPACK 4.03, etc.")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0xa6a446ac):
-        ctx.decoder_size.set(283)
-        ctx.decoder.segclass.set("common283")
-        ctx.createdby.set("EXEPACK 4.05-4.06")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x7755de74):
-        ctx.decoder_size.set(283)
-        ctx.decoder.segclass.set("WordPerfect283")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x1797940c):
-        ctx.decoder_size.set(290)
-        ctx.decoder.segclass.set("common290")
-        ctx.createdby.set("LINK 5.60/etc.")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0xb3e99388):
-        ctx.decoder_size.set(290)
-        ctx.decoder.segclass.set("DECOMP")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0xce1bf069):
-        ctx.decoder_size.set(291)
-        ctx.decoder.segclass.set("Artisoft291")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0xc705ff4f):
-        ctx.decoder_size.set(258)
-        ctx.decoder.segclass.set("EXEPATCK258")
-        ctx.createdby.set("EXEPATCK")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x87ba64ac):
-        ctx.decoder_size.set(277)
-        ctx.decoder.segclass.set("EXEPATCK277")
-        ctx.createdby.set("EXEPATCK")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x10417761):
-        ctx.decoder_size.set(279)
-        ctx.decoder.segclass.set("EXEPATCK279")
-        ctx.createdby.set("EXEPATCK")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x5a159410):
-        ctx.decoder_size.set(283)
-        ctx.decoder.segclass.set("EXEPATCK283")
-        ctx.createdby.set("EXEPATCK")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x4745c5ca):
-        ctx.decoder_size.set(283)
-        ctx.decoder.segclass.set("LOWFIX")
-        ctx.createdby.set("LOWFIX")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
-        found = True
-
-    if (not found) and (ctx.crc_fingerprint.val==0x848c6688):
-        ctx.decoder_size.set(283)
-        ctx.decoder.segclass.set("Fifield")
-        ctx.createdby.set("D. Fifield's exepack")
-        ctx.cmpr_reloc_tbl_pos.set(pos+ctx.decoder_size.val)
+        if 'sc' in x:
+            ctx.decoder.segclass.set(x['sc'])
+        if 'cb' in x:
+            ctx.createdby.set(x['cb'])
         found = True
 
     if not found:
