@@ -36,6 +36,7 @@ class crc32_class:
 
 class context:
     def __init__(ctx):
+        ctx.opt_uppercase = False
         ctx.dict = {}
 
 class exe_info:
@@ -179,7 +180,11 @@ def onefile(ctx, fn):
     else:
         fctx.hash_strat = 0
 
-    print('%08x;csz=%d;fsz=%d;t=%s;m=%s;h=%s;id=%s|%s' % (fctx.hash,
+    if ctx.opt_uppercase:
+        print('%08X' % (fctx.hash), end='')
+    else:
+        print('%08x' % (fctx.hash), end='')
+    print(';csz=%d;fsz=%d;t=%s;m=%s;h=%s;id=%s|%s' % ( \
         fctx.codesize, fctx.filesize, \
         fctx.ffmt, fctx.msg, fctx.hash_strat, \
         fctx.file_id, fctx.name_friendly))
@@ -212,6 +217,7 @@ def usage():
     print("Usage: exehash.py [options] file1 [file2...]")
     print("  Options:")
     print("   -d <dictfile> : Use a dictionary file")
+    print("   -u : Print uppercase hex digits")
 
 def main():
     ctx = context()
@@ -221,7 +227,9 @@ def main():
     i = 1
     while i<len(sys.argv):
         if sys.argv[i][0]=='-':
-            if sys.argv[i][1:]=='d':
+            if sys.argv[i][1:]=='u':
+                ctx.opt_uppercase = True
+            elif sys.argv[i][1:]=='d':
                 i += 1
                 dict_filenames.append(sys.argv[i])
             else:
