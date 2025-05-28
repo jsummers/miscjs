@@ -138,6 +138,10 @@ def detect_and_decode_exe(ctx, fctx):
         return
 
     decode_dos_exe(ctx, fctx, ei)
+    if fctx.hash_strat!=2:
+        fctx.hash_strat = 1
+        fctx.codepos = 0
+        fctx.codesize = fctx.filesize
 
 def onefile(ctx, fn):
     fctx = file_context(ctx)

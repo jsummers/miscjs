@@ -40,8 +40,7 @@ Here's an example of using Exehash:
 $ exehash.py LHARC.EXE
 73bd5158;csz=30744;fsz=31256;t=EXE-DOS;m=OK;h=2;id=UNK|LHARC.EXE
 
-The first 8 characters are the hash (CRC-32 IEEE). If something went wrong,
-it is 00000000.
+The first 8 characters are the hash (CRC-32 IEEE).
 csz is the size in bytes of the code segment, or the part of the file for
 which the hash was computed.
 fsz is the size in bytes of the whole file.
