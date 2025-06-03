@@ -47,19 +47,21 @@ class file_context:
     def __init__(fctx, ctx):
         fctx.name_friendly = '?'
         fctx.isopen = False
-        #fctx.valid_dos_exe = False
         fctx.hash = 0
-        fctx.codesize = 0
         fctx.filesize = 0
         fctx.ffmt = 'ERR'
         fctx.msg = 'ERR'
         fctx.file_id = 'UNK'
         fctx.hash_strat = 0 # 0=none 1=whole file 2=DOSEXE 3=Ext.EXE
+        fctx.hash_pos = 0
+        fctx.hash_len = 0
+        fctx.is_dos_exe = False
+        fctx.is_ext_exe = False
 
 def detect_and_decode_ext_exe(ctx, fctx, ei):
     if fctx.filesize<66:
         return
-    if fctx.codepos>0 and fctx.codepos<64:
+    if ei.codepos>0 and ei.codepos<64:
         return
     if ei.reloc_pos>0 and ei.reloc_pos<64:
         return
@@ -87,14 +89,12 @@ def detect_and_decode_ext_exe(ctx, fctx, ei):
         fctx.ffmt = 'EXE-LE'
 
     if ei.is_ext_exe:
-        fctx.hash_strat = 3
-        fctx.codepos = 60
-        fctx.codesize = fctx.filesize - fctx.codepos
+        fctx.is_ext_exe = True
 
 def decode_dos_exe(ctx, fctx, ei):
     fctx.ffmt = 'EXE-DOS'
 
-    if fctx.codepos > fctx.filesize:
+    if ei.codepos > fctx.filesize:
         fctx.msg = 'BAD-EXE-MISC'
         return
 
@@ -102,22 +102,19 @@ def decode_dos_exe(ctx, fctx, ei):
         fctx.msg = 'BAD-EXE-MISC'
         return
 
-    if ei.e2==0:
-        codeend = 512*ei.e4
-    else:
-        codeend = 512*(ei.e4-1) + ei.e2
-
-    if codeend > fctx.filesize:
+    if ei.codeend > fctx.filesize:
         fctx.msg = 'BAD-EXE-TRUNCATED'
         return
 
-    fctx.codesize = codeend - fctx.codepos
-    fctx.hash_strat = 2
+    fctx.is_dos_exe = True
+    fctx.dos_exe_codepos = ei.codepos
+    fctx.dos_exe_codesize = ei.codeend - ei.codepos
 
 def detect_and_decode_exe(ctx, fctx):
     if fctx.filesize<28:
         return
 
+    # Read general info about the maybe-EXE file
     ei = exe_info()
     fctx.inf.seek(0, 0)
     tmpbytes = fctx.inf.read(28)
@@ -128,20 +125,22 @@ def detect_and_decode_exe(ctx, fctx):
     if ei.e0!=0x5a4d and ei.e0!=0x4d5a:
         return
 
-    fctx.codepos = 16*ei.e8
     ei.num_relocs = ei.e6
     ei.reloc_pos = ei.e24
     ei.reloc_end = ei.reloc_pos + 4*ei.num_relocs
+    ei.codepos = 16*ei.e8
+    if ei.e2==0:
+        ei.codeend = 512*ei.e4
+    else:
+        ei.codeend = 512*(ei.e4-1) + ei.e2
 
+    # Decide if it's extended EXE
     detect_and_decode_ext_exe(ctx, fctx, ei)
-    if ei.is_ext_exe:
+    if fctx.is_ext_exe:
         return
 
+    # If not, treat it as DOS EXE
     decode_dos_exe(ctx, fctx, ei)
-    if fctx.hash_strat!=2:
-        fctx.hash_strat = 1
-        fctx.codepos = 0
-        fctx.codesize = fctx.filesize
 
 def onefile(ctx, fn):
     fctx = file_context(ctx)
@@ -162,16 +161,29 @@ def onefile(ctx, fn):
 
         fctx.msg = 'OK' # default
         fctx.ffmt = 'MISC'
-        fctx.hash_strat = 1 # default to whole file
-        fctx.codepos = 0
-        fctx.codesize = fctx.filesize
 
+        # Analyze the file
         detect_and_decode_exe(ctx, fctx)
 
-        if fctx.codesize>0 and \
-            (fctx.codepos+fctx.codesize <= fctx.filesize):
-            fctx.inf.seek(fctx.codepos, 0)
-            codeblob = bytearray(fctx.inf.read(fctx.codesize))
+        # Choose a strategy
+        if fctx.is_ext_exe:
+            fctx.hash_strat = 3
+            fctx.hash_pos = 60
+            fctx.hash_len = fctx.filesize - fctx.hash_pos
+        elif fctx.is_dos_exe:
+            fctx.hash_strat = 2
+            fctx.hash_pos = fctx.dos_exe_codepos
+            fctx.hash_len = fctx.dos_exe_codesize
+        else:
+            fctx.hash_strat = 1
+            fctx.hash_pos = 0
+            fctx.hash_len = fctx.filesize
+
+        # Compute the hash
+        if fctx.hash_len>0 and \
+            (fctx.hash_pos+fctx.hash_len <= fctx.filesize):
+            fctx.inf.seek(fctx.hash_pos, 0)
+            codeblob = bytearray(fctx.inf.read(fctx.hash_len))
             fctx.hash = ctx.crcobj.oneshot(codeblob)
         else:
             fctx.hash_strat = 0
@@ -189,7 +201,7 @@ def onefile(ctx, fn):
     else:
         print('%08x' % (fctx.hash), end='')
     print(';csz=%d;fsz=%d;t=%s;m=%s;h=%s;id=%s|%s' % ( \
-        fctx.codesize, fctx.filesize, \
+        fctx.hash_len, fctx.filesize, \
         fctx.ffmt, fctx.msg, fctx.hash_strat, \
         fctx.file_id, fctx.name_friendly))
 
