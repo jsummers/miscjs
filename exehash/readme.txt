@@ -13,6 +13,8 @@ compression" (such as LZEXE), then decompressed, the resulting file would
 probably not be exactly the same as the original. But its Exahash
 fingerprint would probably be the same.
 
+For a list of options, run the script without parameters.
+
 Caution: Exehash is expected to be used on the EXE file that you would
 run to *run* the software, not on a "self-extracting" EXE file that you
 might run to *install* the software. In many cases, the payload of a

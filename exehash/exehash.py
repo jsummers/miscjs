@@ -37,7 +37,10 @@ class crc32_class:
 class context:
     def __init__(ctx):
         ctx.opt_uppercase = False
+        ctx.opt_wholefile_only = False
+        ctx.opt_wholefile_also = False
         ctx.dict = {}
+        ctx.prev_hash_strat = 0
 
 class exe_info:
     def __init__(self):
@@ -142,7 +145,10 @@ def detect_and_decode_exe(ctx, fctx):
     # If not, treat it as DOS EXE
     decode_dos_exe(ctx, fctx, ei)
 
-def onefile(ctx, fn):
+def onefile(ctx, fn, force_wholefile):
+    # Make sure we reset this
+    ctx.prev_hash_strat = 0
+
     fctx = file_context(ctx)
     if (len(fn)>2) and (fn[0:2]=='./'):
         fctx.name_friendly = fn[2:]
@@ -166,7 +172,11 @@ def onefile(ctx, fn):
         detect_and_decode_exe(ctx, fctx)
 
         # Choose a strategy
-        if fctx.is_ext_exe:
+        if force_wholefile:
+            fctx.hash_strat = 1
+            fctx.hash_pos = 0
+            fctx.hash_len = fctx.filesize
+        elif fctx.is_ext_exe:
             fctx.hash_strat = 3
             fctx.hash_pos = 60
             fctx.hash_len = fctx.filesize - fctx.hash_pos
@@ -205,6 +215,8 @@ def onefile(ctx, fn):
         fctx.ffmt, fctx.msg, fctx.hash_strat, \
         fctx.file_id, fctx.name_friendly))
 
+    ctx.prev_hash_strat = fctx.hash_strat
+
 def read_dict_file(ctx, dict_fn):
     dict_inf = open(dict_fn, 'r', encoding='utf8', errors='replace')
 
@@ -234,6 +246,8 @@ def usage():
     print("  Options:")
     print("   -d <dictfile> : Use a dictionary file")
     print("   -u : Print uppercase hex digits")
+    print("   -a : Also compute hash on whole file")
+    print("   -w : Only compute hash on whole file")
 
 def main():
     ctx = context()
@@ -245,6 +259,10 @@ def main():
         if sys.argv[i][0]=='-':
             if sys.argv[i][1:]=='u':
                 ctx.opt_uppercase = True
+            elif sys.argv[i][1:]=='a':
+                ctx.opt_wholefile_also = True
+            elif sys.argv[i][1:]=='w':
+                ctx.opt_wholefile_only = True
             elif sys.argv[i][1:]=='d':
                 i += 1
                 dict_filenames.append(sys.argv[i])
@@ -259,12 +277,23 @@ def main():
         usage()
         return
 
+    if ctx.opt_wholefile_only and ctx.opt_wholefile_also:
+        ctx.opt_wholefile_only = False
+
     ctx.crcobj = crc32_class(crc32_factory())
 
     for fn in dict_filenames:
         read_dict_file(ctx, fn)
 
     for fn in input_filenames:
-        onefile(ctx, fn)
+        if ctx.opt_wholefile_only:
+            onefile(ctx, fn, True)
+        else:
+            onefile(ctx, fn, False)
+
+            # This is a hack, but it's an easy way to process the same
+            # file twice.
+            if ctx.opt_wholefile_also and (ctx.prev_hash_strat>1):
+                onefile(ctx, fn, True)
 
 main()
