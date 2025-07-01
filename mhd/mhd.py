@@ -25,6 +25,7 @@ class context:
         ctx.nbytes = 16
         ctx.keytype = ''
         ctx.include_ascii = True
+        ctx.include_hdr_line = False
         ctx.offset_is_set = False
         ctx.use_backward_offset = False
 
@@ -233,6 +234,24 @@ def onefile(ctx, fn):
     if fctx.isopen:
         fctx.inf.close()
 
+def print_hdr_line(ctx):
+    print("#", end='')
+
+    for i in range(ctx.nbytes):
+        if i==0:
+            print("0", end='')
+        elif i<=98 or (i<1000 and (i%2)==0):
+            print("%3d" % (i), end='')
+        else:
+            print("   ", end='')
+
+    if ctx.include_ascii:
+        print(" ", end='');
+        for i in range(ctx.nbytes):
+            print(i%10, end='')
+
+    print("")
+
 def usage():
     print("MHD: Multi-file hex dump utility")
     print("Usage: mhd.py [options] file1 [file2...]")
@@ -241,6 +260,7 @@ def usage():
     print(" -o<offset>: Offset of first byte to dump, measured from \"key\" position")
     print(" -ob: Dump the bytes just before the key position")
     print(" -Z: Suppress ASCII representation")
+    print(" -h: Print a header line with offsets (decimal)")
     print(" -keof: Key position = end of file")
     print(" -kexecode, -kexeoverlay, -kexeentry, -kexereloc, -kexerelocend, -kexesig:")
     print("    Special key positions for EXE files")
@@ -260,8 +280,10 @@ def main():
                     ctx.offset_is_set = True
             elif sys.argv[i][1]=='n':
                 ctx.nbytes = int(sys.argv[i][2:])
-            elif sys.argv[i][1]=='Z':
+            elif sys.argv[i][1:]=='Z':
                 ctx.include_ascii = False
+            elif sys.argv[i][1:]=='h':
+                ctx.include_hdr_line = True
             elif sys.argv[i][1]=='k':
                 ctx.keytype = sys.argv[i][2:]
             else:
@@ -285,6 +307,9 @@ def main():
     if ctx.use_backward_offset:
         ctx.offset_from_key = -ctx.nbytes
         ctx.offset_is_set = True
+
+    if ctx.include_hdr_line:
+        print_hdr_line(ctx)
 
     for i in range(1, len(sys.argv)):
         if sys.argv[i][0]!='-':
